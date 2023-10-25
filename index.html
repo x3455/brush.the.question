@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>答题应用</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 414px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        #prevBtn {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #nextBtn {
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+
+        #randomToggle {
+            margin-left: 10px;
+        }
+
+        .question {
+            margin-bottom: 20px;
+        }
+
+        .options label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .options div label {
+            display: inline;
+            white-space: pre-line;
+        }
+
+        #answerContainer {
+            font-weight: bold;
+            margin-top: 10px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .correct {
+            color: green;
+        }
+
+        .incorrect {
+            color: red;
+        }
+
+        /* 底部信息样式 */
+        #infoContainer {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div id="questions"></div>
+<button id="prevBtn">上一题</button>
+<button id="nextBtn">下一题</button>
+<button id="submitBtn">提交</button>
+<label>
+    <input type="checkbox" id="randomToggle"> 随机出题
+    <input type="number" id="jumpToQuestion" min="1" max="5"> <!-- 输入题号 -->
+    <button id="jumpBtn">跳转</button> <!-- 跳转按钮 -->
+</label>
+<div id="answerContainer"></div>
+<!-- 顶部信息容器 -->
+<div id="infoContainer">
+    <span id="totalQuestions"></span>
+    <span id="totalAnswered"></span>
+    <span id="correctCount"></span>
+    <span id="incorrectCount"></span>
+    <span id="accuracy"></span>
+</div>
+<script>
+    var questionsData = [
+        {
+            "question": "HTML 是一种编程语言吗？",
+            "type": "trueFalse",
+            "correctAnswer": "T"
+        },
+        {
+            "question": "CSS 用于控制网页的样式吗？",
+            "type": "trueFalse",
+            "correctAnswer": "T"
+        },
+        {
+            "question": "JavaScript 是一种强类型语言吗？",
+            "type": "trueFalse",
+            "correctAnswer": "F"
+        },
+        {
+            "question": "HTML 中的 'H' 是什么意思？",
+            "type": "multiple",
+            "options": ["A. 标题", "B. 超文本", "C. 水平", "D. 语言", "E. 样式"],
+            "correctAnswer": ["A", "B"]
+        },
+        {
+            "question": "以下哪个不是编程语言？",
+            "type": "single",
+            "options": ["A. HTML", "B. CSS", "C. JavaScript", "D. Photoshop"],
+            "correctAnswer": "D"
+        }
+    ];
+    var totalAnswered = 0; // 初始化总答题数量
+    var currentQuestion = 0;
+    var correctCount = 0; // 添加这一行
+    var incorrectCount = 0; // 添加这一行
+    var questionsContainer = $("#questions");
+    var answerContainer = $("#answerContainer");
+    var randomToggle = $("#randomToggle");
+    var totalAnsweredElement = $("#totalAnswered"); // 获取总答题数量的元素
+    var totalQuestionsElement = $("#totalQuestions");
+    var correctCountElement = $("#correctCount");
+    var incorrectCountElement = $("#incorrectCount");
+    var accuracyElement = $("#accuracy");
+    var jumpToQuestionInput = $("#jumpToQuestion");
+    var jumpBtn = $("#jumpBtn");
+
+    jumpBtn.click(function () {
+        var questionNumber = parseInt(jumpToQuestionInput.val());
+        if (questionNumber >= 1 && questionNumber <= questionsData.length) {
+            currentQuestion = questionNumber - 1; // 减一是因为题号从1开始，而数组索引从0开始
+            showRandomQuestion(); // 更新显示
+        } else {
+            alert("题号无效，请输入1到" + questionsData.length + "之间的数字。");
+        }
+    });
+
+    function updateInfo() {
+        totalAnsweredElement.text("总答题数量: " + totalAnswered); // 更新总答题数量的显示
+        totalQuestionsElement.text("总题数: " + questionsData.length);
+        correctCountElement.text("答对数量: " + correctCount);
+        incorrectCountElement.text("答错数量: " + incorrectCount);
+        var accuracy = ((correctCount / totalAnswered) * 100).toFixed(2);
+        accuracyElement.text("正确率: " + accuracy + "%");
+    }
+
+    // 创建一个数组来存储原始问题顺序
+    var originalQuestionOrder = Array.from(Array(questionsData.length).keys());
+
+    function shuffleArray(arr) {
+        // 使用 Fisher-Yates 算法来打乱数组顺序
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+
+    function showRandomQuestion() {
+        if (randomToggle.prop("checked")) {
+            shuffleArray(originalQuestionOrder);
+            showQuestion(originalQuestionOrder[currentQuestion]);
+        } else {
+            showQuestion(currentQuestion);
+        }
+    }
+
+    function showQuestion(index) {
+        var questionData = questionsData[index];
+        questionsContainer.empty();
+        var questionDiv = $("<div>").addClass("question");
+        var questionTitle = $("<h2>").text("问题 " + (index + 1) + ": " + questionData.question);
+        questionDiv.append(questionTitle);
+
+        if (questionData.type === "trueFalse") {
+            var trueLabel = $("<label>");
+            var trueInput = $("<input>").attr({
+                type: "radio",
+                name: "q" + index,
+                value: "T"
+            });
+            trueLabel.append(trueInput, document.createTextNode("是"));
+            questionDiv.append(trueLabel);
+
+            var falseLabel = $("<label>");
+            var falseInput = $("<input>").attr({
+                type: "radio",
+                name: "q" + index,
+                value: "F"
+            });
+            falseLabel.append(falseInput, document.createTextNode("否"));
+            questionDiv.append(falseLabel);
+        } else if (questionData.type === "multiple") {
+            for (var i = 0; i < questionData.options.length; i++) {
+                var optionDiv = $("<div>"); // 新增的代码，用于包装选项
+                var optionLabel = $("<label>");
+                var optionInput = $("<input>").attr({
+                    type: "checkbox",
+                    name: "q" + index,
+                    value: String.fromCharCode(65 + i)
+                });
+                optionLabel.append(optionInput, document.createTextNode(questionData.options[i]));
+                optionDiv.append(optionLabel); // 将标签添加到新的div内
+                questionDiv.append(optionDiv); // 将新的div添加到问题容器内
+            }
+        } else if (questionData.type === "single") {
+            for (var i = 0; i < questionData.options.length; i++) {
+                var optionDiv = $("<div>"); // 新增的代码，用于包装选项
+                var optionLabel = $("<label>");
+                var optionInput = $("<input>").attr({
+                    type: "radio",
+                    name: "q" + index,
+                    value: String.fromCharCode(65 + i)
+                });
+                optionLabel.append(optionInput, document.createTextNode(questionData.options[i]));
+                optionDiv.append(optionLabel); // 将标签添加到新的div内
+                questionDiv.append(optionDiv); // 将新的div添加到问题容器内
+            }
+        }
+
+        questionsContainer.append(questionDiv);
+    }
+
+    function prevQuestion() {
+        if (currentQuestion > 0) {
+            currentQuestion--;
+            showQuestion(currentQuestion);
+            answerContainer.empty(); // 清空答案容器
+        }
+    }
+
+    function nextQuestion() {
+        if (currentQuestion < questionsData.length - 1) {
+            currentQuestion++;
+            showQuestion(currentQuestion);
+            answerContainer.empty(); // 清空答案容器
+        }
+    }
+
+    function submitAnswers() {
+        var currentQuestionData = questionsData[currentQuestion];
+        var selectedOptions = $("input[name='q" + currentQuestion + "']:checked").map(function () {
+            return $(this).val();
+        }).get();
+
+        var message = "";
+
+        if (currentQuestionData.type === "trueFalse") {
+            var userAnswer = selectedOptions.length > 0 ? selectedOptions[0] : null;
+            if (userAnswer === currentQuestionData.correctAnswer) {
+                message = "回答正确！";
+                correctCount++;
+            } else {
+                message = "回答错误。正确答案是: " + currentQuestionData.correctAnswer;
+                incorrectCount++;
+            }
+        } else if (currentQuestionData.type === "multiple") {
+            if (JSON.stringify(selectedOptions) === JSON.stringify(currentQuestionData.correctAnswer)) {
+                message = "回答正确！";
+                correctCount++;
+            } else {
+                message = "回答错误。正确答案是: " + currentQuestionData.correctAnswer.join(", ");
+                incorrectCount++;
+            }
+        } else if (currentQuestionData.type === "single") {
+            var userAnswer = selectedOptions.length > 0 ? selectedOptions[0] : null;
+            if (userAnswer === currentQuestionData.correctAnswer) {
+                message = "回答正确！";
+                correctCount++;
+            } else {
+                message = "回答错误。正确答案是: " + currentQuestionData.correctAnswer;
+                incorrectCount++;
+            }
+        }
+
+        answerContainer.empty(); // 清空答案容器
+        answerContainer.removeClass("correct incorrect");
+        answerContainer.addClass((currentQuestionData.type === "multiple" && JSON.stringify(selectedOptions) === JSON.stringify(currentQuestionData.correctAnswer)) || (userAnswer === currentQuestionData.correctAnswer) ? "correct" : "incorrect");
+        answerContainer.html(message);
+        totalAnswered++; // 每提交一次答案，总答题数量加一
+        updateInfo(); // 更新顶部信息
+    }
+
+    $("#prevBtn").click(prevQuestion);
+    $("#nextBtn").click(nextQuestion);
+    $("#submitBtn").click(submitAnswers);
+
+    // 添加复选框的事件监听器
+    randomToggle.change(showRandomQuestion);
+
+    // 初始显示问题
+    showRandomQuestion();
+    updateInfo();
+</script>
+</body>
+</html>
